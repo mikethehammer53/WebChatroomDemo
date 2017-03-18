@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta name="viewport" content="width=device-width" />
+<meta charset="UTF-8" />
+<title>WebSocket客户端</title>
+</head>
+
+<body>
+	<div>
+		<div id="input">
+			用户名:<input id="user" type="text" width="50px">
+			<input type="button" id="btnConnection" value="连接" />
+		</div>
+		<div id="logged" style="display: none;">
+			已作为<label style="color: blue" id="lable"></label>登录
+			<input type="button" id="btnClose" value="断开" disabled="disabled" /> 
+		</div>
+		<br>
+		<textarea id="msg" style="height: 100px;width:300px ;overflow: auto;border: 1px solid black"></textarea>
+		<br> 
+		<div>
+			目标:<input id="target" type="text">
+			<input type="button" id="btnSend" value="发送" disabled="disabled" />
+			<br>
+			<div id="dis" style="height: 200px;width:300px ;overflow: auto;border: 1px solid black"></div>
+			<br>
+			<input id="clr" type="button" value="清除记录">
+			
+		</div>
+	</div>
+	<script src="js/jquery-3.1.1.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript">
+		var msg = "";
+		var user = "";
+		var target="";
+		var recvMsg=null;
+		$(function() {
+			var socket = null;
+			if (typeof (WebSocket) == "undefined") {
+				alert("您的浏览器不支持WebSocket");
+				return;
+			}
+
+			$("#btnConnection").click(
+					function() {
+						if ($("#user").val() != "") {
+							user = $("#user").val();
+							$("#dis").append(user +" is online<br>");
+							//实现化WebSocket对象，指定要连接的服务器地址与端口
+							socket = new WebSocket(
+									"ws://localhost:8080/WebSocketServer/chat/"+user);
+						} 
+						else{
+							alert("请输入用户名!");
+						}
+						
+						//打开事件
+						socket.onopen = function() {
+							alert(user+"已连接");
+							socket.send(user+"|" + location.href
+									+"|" +new Date());
+							$("#dis").append(
+									new Date().getHours() + ":"
+											+ new Date().getMinutes() + ":"
+											+ new Date().getSeconds() + ":"
+											+ "Socket Opened<br>");
+							$("#input").hide();
+							$("#logged").show();
+							$("#lable").append(user);
+							$("#btnConnection").attr("disabled","disabled");
+							$("#btnClose").removeAttr("disabled");
+							$("#btnSend").removeAttr("disabled");
+							
+							
+						};
+						//获得消息事件
+						socket.onmessage = function(message) {
+							recvMsg=message.data.split("|");
+							user=recvMsg[2];
+							target=recvMsg[3];
+							msg=recvMsg[4];
+							//alert(message.data);
+							alert(user+":"+msg);
+							$("#dis").append(user+"→"+target+":"+msg+"<br>");
+						};
+						//关闭事件
+						socket.onclose = function() {
+							alert(user+"已断开");
+							$("#input").show();
+							$("#logged").hide();
+							$("#lable").empty();
+							$("#btnConnection").removeAttr("disabled");
+							$("#btnClose").attr("disabled","disabled");
+							$("#btnSend").attr("disabled","disabled");
+							$("#dis").append(user+" is offline<br>");
+						};
+						//发生了错误事件
+						socket.onerror = function() {
+							alert("发生了错误");
+						};
+					});
+
+			$("#btnSend").click(function() {
+				msg = $("#msg").val();
+				target=$("#target").val();
+				if(target!=""){
+					if(msg!=""){
+						socket.send( location.href+"|" +new Date()+"|"+user +"|"+target+"|"+msg);
+						$("#dis").append(user+"→"+target+":"+msg);
+					}
+					else{
+						alert("请输入要发送的信息");
+					}
+				}
+				else{
+					alert("请输入目标");
+				}
+				
+			});
+
+			$("#btnClose").click(function() {
+				socket.close();
+			});
+			
+			$("#clr").click(function(){
+				$("#dis").empty();
+			});
+			
+		});
+	</script>
+</body>
+
+</html>
